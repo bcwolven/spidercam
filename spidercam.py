@@ -33,6 +33,8 @@ class arachnivision():
         self.peopleAngRes = 0.
         self.spiderAngRes = 0.
         self.sourceScale  = 0.
+        self.spiderVisRespFile = \
+            "Habronattus_pyrrithrix_Photoreceptor_absorbance.csv"
 
     def _setupFigure(self,figID):
         # Is this scaling because of a matplotlib convention or did I just
@@ -75,6 +77,51 @@ class arachnivision():
     def setSpiderAngularResolution(self,fwhmInDegrees):
         """Set value for FWHM of PSF in degrees, assumed to be Gaussian"""
         self.spiderAngRes = fwhmInDegrees
+
+    def loadSpiderData(self):
+        csvFile = os.path.join(projRoot,self.spiderVisRespFile)
+
+# Reads data but indexing of resulting 2-D array does not work as expected?
+#       import csv
+#       with open(csvFile,'rU') as csviter:
+#           csvRows = csv.reader(csviter)
+#           respData = []
+#           for rr,row in enumerate(csvRows):
+#               if rr == 0:
+#                   columnHeaders = row
+#               else:
+#                   respData.append([float(xx) for xx in row])
+#       respData = np.array(respData)
+#       print(len(columnHeaders),len(respData),np.shape(respData))
+#       print(respData[0])
+#       print(respData[-1])
+#       print(respData[0][0],respData[0][1],respData[0][2],respData[0][3])
+#       print([respData[0:10]][0])
+#       respData = np.reshape(respData)
+#       import sys
+#       sys.exit()
+
+        respData = np.genfromtxt(csvFile,dtype=float,delimiter=',',names=True)
+        colmName = respData.dtype.names
+        print("Read file: %s" % self.spiderVisRespFile)
+        print("Extracted columns:")
+        for header in colmName:
+            print(header)
+        plt.figure('spiderVisResp')
+        plt.axes().set_title(self.spiderVisRespFile)
+        plt.axes().set_xlabel('Wavelength (nm)')
+        plt.axes().set_ylabel('Normalized Photoreceptor Absorbance')
+        plt.grid(True)
+        plt.plot(respData[colmName[0]][:],respData[colmName[1]][:],color='b',
+                 label=colmName[1])
+        plt.plot(respData[colmName[0]][:],respData[colmName[2]][:],color='g',
+                 label=colmName[2])
+        plt.plot(respData[colmName[0]][:],respData[colmName[3]][:],color='r',
+                 label=colmName[3])
+        plt.legend(loc='lower center',fontsize=6)
+        plt.savefig(os.path.join(projRoot,"photoreceptor-absorbance.png"))
+        # plt.clf()
+        # plt.cla()
 
     def loadSourceImage(self,srcImg):
         """Load source image and set dimensions. Assuming color channels are in
@@ -134,19 +181,19 @@ class arachnivision():
                                                       spiderPSF,mode='same')
 
     def saveSourceImage(self):
-        self._setupFigure(0)
+        self._setupFigure('source')
         plt.imshow(jumper.imgOrig)
         print("Saving unaltered version.")
         plt.savefig(os.path.join(projRoot,"source-"+self.srcImg))
 
     def savePeopleImage(self):
-        self._setupFigure(1)
+        self._setupFigure('people')
         plt.imshow(jumper.imgPepl)
         print("Saving people/naked eye version.")
         plt.savefig(os.path.join(projRoot,"people-"+self.srcImg))
 
     def saveSpiderImage(self):
-        self._setupFigure(2)
+        self._setupFigure('spider')
         plt.imshow(jumper.imgSpdr)
         print("Saving spider-eyes-ed version.")
         plt.savefig(os.path.join(projRoot,"spider-"+self.srcImg))
@@ -188,6 +235,9 @@ if __name__ == "__main__":
     # "People" and "Spider" ony at the moment. Perhaps make more general later?
     jumper.setPeopleAngularResolution(args.people_resolution)
     jumper.setSpiderAngularResolution(args.spider_resolution)
+
+    # Load spider photoreceptor absorbance curves
+    jumper.loadSpiderData()
 
     # Load source image
     jumper.loadSourceImage(srcImg)
